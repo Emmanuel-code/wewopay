@@ -99,14 +99,16 @@ export default function DeveloperSettingsPage() {
     }
   };
 
-  const handleUpgradePlan = async (newPlan: 'PRO' | 'BUSINESS') => {
+  // Paid plan upgrades are disabled until plan checkout is live — the old
+  // handler let anyone claim Pro/Business rates for free, which gave away
+  // commission. Downgrades stay available.
+  const handleDowngradePlan = async () => {
     try {
-      const commission = newPlan === 'PRO' ? 1.5 : 0.8;
       await updateDeveloper({
-        plan: newPlan,
-        commission_rate: commission,
+        plan: 'FREE',
+        commission_rate: 3.0,
       });
-      toast.success(`Upgraded to ${newPlan} plan! Commission reduced to ${commission}%.`);
+      toast.success('Downgraded to Free plan. Commission is now 3.0%.');
     } catch (err: any) {
       toast.error('Failed to switch plan');
     }
@@ -240,6 +242,7 @@ export default function DeveloperSettingsPage() {
             <CardTitle className="text-lg">Subscription Tier & Commission</CardTitle>
             <CardDescription>
               Lower your transaction commission fee by upgrading your monthly developer plan.
+              Paid plan checkout is launching soon — upgrades will open once billing is live.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -263,7 +266,7 @@ export default function DeveloperSettingsPage() {
                   variant="outline"
                   size="sm"
                   disabled={developer?.plan === 'FREE'}
-                  onClick={() => toast.info('You are currently on the Free plan')}
+                  onClick={() => handleDowngradePlan()}
                 >
                   {developer?.plan === 'FREE' ? 'Current Plan' : 'Downgrade'}
                 </Button>
@@ -287,10 +290,9 @@ export default function DeveloperSettingsPage() {
                 <Button
                   size="sm"
                   variant={developer?.plan === 'PRO' ? 'outline' : 'default'}
-                  onClick={() => handleUpgradePlan('PRO')}
-                  disabled={developer?.plan === 'PRO'}
+                  disabled={developer?.plan !== 'PRO'}
                 >
-                  {developer?.plan === 'PRO' ? 'Current Plan' : 'Upgrade to Pro'}
+                  {developer?.plan === 'PRO' ? 'Current Plan' : 'Coming soon'}
                 </Button>
               </div>
 
@@ -312,10 +314,9 @@ export default function DeveloperSettingsPage() {
                 <Button
                   size="sm"
                   variant={developer?.plan === 'BUSINESS' ? 'outline' : 'default'}
-                  onClick={() => handleUpgradePlan('BUSINESS')}
-                  disabled={developer?.plan === 'BUSINESS'}
+                  disabled={developer?.plan !== 'BUSINESS'}
                 >
-                  {developer?.plan === 'BUSINESS' ? 'Current Plan' : 'Upgrade to Business'}
+                  {developer?.plan === 'BUSINESS' ? 'Current Plan' : 'Coming soon'}
                 </Button>
               </div>
             </div>
