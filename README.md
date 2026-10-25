@@ -1,91 +1,189 @@
-# Welcome to Your Miaoda Project
+<div align="center">
 
-## Project Info
+  <img src="public/images/logo/Logo.png" alt="WewoPay Logo" width="120" style="border-radius: 16px; margin-bottom: 16px;" />
 
-## Project Directory
+  # WewoPay
+  ### Automated Developer Escrow & Milestone Payment Platform
 
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)](https://www.typescriptlang.org/)
+  [![Vite](https://img.shields.io/badge/Vite-5-646cff?logo=vite)](https://vitejs.dev/)
+  [![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-3ecf8e?logo=supabase)](https://supabase.com/)
+  [![Paystack](https://img.shields.io/badge/Paystack-Gateway-00c3f7)](https://paystack.com/)
+  [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v3-38b2ac?logo=tailwind-css)](https://tailwindcss.com/)
+
+  <p align="center">
+    WewoPay eliminates payment friction, scope creep, and trust deficits between software engineers, agencies, and their clients through automated milestone escrows, zero-friction client portals, and automated recurring billing.
+  </p>
+
+</div>
+
+---
+
+## 📌 Table of Contents
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [Architecture & Tech Stack](#-architecture--tech-stack)
+- [Project Directory](#-project-directory)
+- [Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Environment Setup](#environment-configuration)
+  - [Database Setup (Supabase)](#database-setup-supabase)
+  - [Edge Functions Deployment](#edge-functions-deployment)
+  - [Running Locally](#running-locally)
+- [Security Model](#-security-model)
+- [License](#-license)
+
+---
+
+## 🚀 Overview
+
+Freelancers and digital agencies frequently face delayed payouts, unapproved scope additions, and awkward payment follow-ups. Clients, on the other hand, worry about upfront deposits without tangible deliverables.
+
+**WewoPay** solves this through a single-account Paystack gateway architecture:
+1. **Developers** structure contracts into clear deliverable milestones with defined pricing and timelines.
+2. **Clients** receive tokenized checkout and portal links requiring **no registration or login**.
+3. **Funds** are deposited into secure escrow and automatically credited to the developer's verified balance upon client approval.
+
+---
+
+## ✨ Key Features
+
+- **🛡️ Milestone Escrow Engine**: Lock client payments in escrow until deliverables are submitted, reviewed, and formally signed off.
+- **🔗 Frictionless Client Portal**: Clients review progress, download receipts, and authorize stage releases without creating an account.
+- **💳 Multi-Channel Checkout**: Credit/debit cards, instant bank transfers, and USSD via 256-bit encrypted Paystack checkout.
+- **🔄 Recurring SaaS & Retainer Subscriptions**: Built-in support for monthly, quarterly, and annual maintenance retainers with dunning retries.
+- **💸 Automated Payouts**: Verified developer payouts disbursed directly to local bank accounts via the Paystack Transfer API.
+- **⚖️ Platform Administration**: Super-admin panel for commission rate controls, audit trails, and platform-wide transaction oversight.
+
+---
+
+## 🛠️ Architecture & Tech Stack
+
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Shadcn UI
+- **Backend & Database**: Supabase (PostgreSQL with Row Level Security, Realtime, and Auth)
+- **Serverless / API**: Supabase Edge Functions (Deno runtime)
+- **Payment Processing**: Paystack API (Inline Checkout, Transfers & Webhooks)
+- **Formatting & Quality**: Biome, TypeScript Strict Mode
+
+---
+
+## 📁 Project Directory
+
+```text
+├── public/                     # Static assets (Favicons, branding, SVG error graphics)
+│   ├── favicon.jpg             # Browser tab icon
+│   └── images/logo/Logo.png    # Primary high-res brand logo
+├── src/
+│   ├── components/             # Reusable UI components & layouts
+│   │   ├── dashboard/          # Developer dashboard widgets & onboarding
+│   │   ├── layouts/            # DashboardLayout & AdminLayout
+│   │   └── ui/                 # Design system components
+│   ├── contexts/               # React Contexts (AuthContext, etc.)
+│   ├── db/                     # Supabase client singleton
+│   ├── hooks/                  # Custom React hooks
+│   ├── pages/
+│   │   ├── admin/              # Master administration views
+│   │   ├── auth/               # Developer Login & Signup views
+│   │   ├── dashboard/          # Developer project & client management
+│   │   └── public/             # Public payment & Client Portal views
+│   ├── services/               # API clients & query helpers
+│   ├── types/                  # TypeScript interface definitions
+│   └── utils/                  # Fee calculations & Paystack utilities
+├── supabase/
+│   ├── functions/              # Edge Functions
+│   │   ├── disburse-payout/    # Authenticated bank transfer disbursements
+│   │   ├── paystack-webhook/   # HMAC-verified webhook settlement listener
+│   │   └── recurring-billing/  # Automated recurring subscription cron
+│   └── migrations/             # PostgreSQL migrations & RLS policies
+└── docs/                       # Specifications and system architecture
 ```
-├── README.md # Documentation
-├── components.json # Component library configuration
-├── index.html # Entry file
-├── package.json # Package management
-├── postcss.config.js # PostCSS configuration
-├── public # Static resources directory
-│   ├── con.jpg # Icon
-│   └── images # Image resources
-├── src # Source code directory
-│   ├── App.tsx # Entry file
-│   ├── components # Components directory
-│   ├── context # Context directory
-│   ├── db # Database configuration directory
-│   ├── hooks # Common hooks directory
-│   ├── index.css # Global styles
-│   ├── layout # Layout directory
-│   ├── lib # Utility library directory
-│   ├── main.tsx # Entry file
-│   ├── routes.tsx # Routing configuration
-│   ├── pages # Pages directory
-│   ├── services # Database interaction directory
-│   ├── types # Type definitions directory
-├── tsconfig.app.json # TypeScript frontend configuration file
-├── tsconfig.json # TypeScript configuration file
-├── tsconfig.node.json # TypeScript Node.js configuration file
-└── vite.config.ts # Vite configuration file
+
+---
+
+## 🏁 Getting Started
+
+### Prerequisites
+
+- **Node.js**: `v20.x` or higher
+- **Package Manager**: `pnpm` (recommended), `npm`, or `yarn`
+- **Supabase CLI**: For running and deploying edge functions (`npx supabase`)
+- **Accounts**: Active [Supabase](https://supabase.com) and [Paystack](https://paystack.com) accounts
+
+### Environment Configuration
+
+Create a `.env.local` file in the root directory (based on `.env.example`):
+
+```bash
+# Frontend Supabase Config
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Payment Gateway (Client-side)
+VITE_PAYSTACK_PUBLIC_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Backend Secrets (Set in Supabase Edge Functions Secrets)
+PAYSTACK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PAYSTACK_WEBHOOK_SECRET=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
-## Tech Stack
+### Database Setup (Supabase)
 
-Vite, TypeScript, React, Supabase
+Execute the migrations in sequential order via the **Supabase Dashboard → SQL Editor** or via the CLI:
 
-## Development Guidelines
-
-### How to edit code locally?
-
-You can choose [VSCode](https://code.visualstudio.com/Download) or any IDE you prefer. The only requirement is to have Node.js and npm installed.
-
-### Environment Requirements
-
-```
-# Node.js ≥ 20
-# npm ≥ 10
-Example:
-# node -v   # v20.18.3
-# npm -v    # 10.8.2
+```bash
+# Apply migrations:
+# 1. 00001_initial_schema.sql
+# 2. 00002_execute_sql_8de89e0c.sql
+# 3. 00003_security_and_atomic_functions.sql
+# 4. 00004_appsec_hardening.sql
 ```
 
-### Installing Node.js on Windows
+### Edge Functions Deployment
 
-```
-# Step 1: Visit the Node.js official website: https://nodejs.org/, click download. The website will automatically suggest a suitable version (32-bit or 64-bit) for your system.
-# Step 2: Run the installer: Double-click the downloaded installer to run it.
-# Step 3: Complete the installation: Follow the installation wizard to complete the process.
-# Step 4: Verify installation: Open Command Prompt (cmd) or your IDE terminal, and type `node -v` and `npm -v` to check if Node.js and npm are installed correctly.
-```
+Deploy the serverless Edge Functions to process webhooks and handle payouts securely:
 
-### Installing Node.js on macOS
+```bash
+# Set backend secrets
+npx supabase secrets set PAYSTACK_SECRET_KEY=sk_test_xxxxxxxxxxxx
+npx supabase secrets set PAYSTACK_WEBHOOK_SECRET=sk_test_xxxxxxxxxxxx
 
-```
-# Step 1: Using Homebrew (Recommended method): Open Terminal. Type the command `brew install node` and press Enter. If Homebrew is not installed, you need to install it first by running the following command in Terminal:
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-Alternatively, use the official installer: Visit the Node.js official website. Download the macOS .pkg installer. Open the downloaded .pkg file and follow the prompts to complete the installation.
-# Step 2: Verify installation: Open Command Prompt (cmd) or your IDE terminal, and type `node -v` and `npm -v` to check if Node.js and npm are installed correctly.
+# Deploy functions
+npx supabase functions deploy paystack-webhook
+npx supabase functions deploy disburse-payout
 ```
 
-### After installation, follow these steps:
-
+Add your webhook endpoint in your **Paystack Dashboard → Settings → Webhooks**:
 ```
-# Step 1: Download the code package
-# Step 2: Extract the code package
-# Step 3: Open the code package with your IDE and navigate into the code directory
-# Step 4: In the IDE terminal, run the command to install dependencies: npm i
-# Step 5: In the IDE terminal, run the command to start the development server: npm run dev -- --host 127.0.0.1
-# Step 6: if step 5 failed, try this command to start the development server: npx vite --host 127.0.0.1
+https://<your-project-ref>.supabase.co/functions/v1/paystack-webhook
 ```
 
-### How to develop backend services?
+### Running Locally
 
-Configure environment variables and install relevant dependencies.If you need to use a database, please use the official version of Supabase.
+```bash
+# 1. Install dependencies
+pnpm install
 
-## Learn More
+# 2. Start Vite development server
+pnpm run dev
+```
 
-You can also check the help documentation: Download and Building the app（ [https://intl.cloud.baidu.com/en/doc/MIAODA/s/download-and-building-the-app-en](https://intl.cloud.baidu.com/en/doc/MIAODA/s/download-and-building-the-app-en)）to learn more detailed content.
+Visit `http://localhost:5173` to view the platform.
+
+---
+
+## 🔒 Security Model
+
+- **Row Level Security (RLS)**: Enforced across all tables. Developers can only read and mutate their own projects, clients, and payouts.
+- **Idempotent Financial Ledger**: The `record_successful_payment` RPC uses unique Paystack references and database transactions to prevent double-crediting on webhook re-transmissions.
+- **Restricted Procedural Execution**: Balance updates cannot be executed directly by anonymous clients; execution is restricted exclusively to `service_role`.
+- **Constant-Time Verification**: Webhook HMAC-SHA512 signatures are compared using timing-safe algorithms to defend against side-channel analysis.
+- **Isolated Token Access**: Client portal and payment links use dedicated parameter-matching database functions, preventing cross-tenant enumeration.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
