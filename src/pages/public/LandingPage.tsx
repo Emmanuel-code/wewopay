@@ -77,6 +77,7 @@ const PLANS = [
     price: '99',
     desc: 'For growing studios & agencies.',
     commission: '1.5%',
+    breakeven: 'Pays for itself once you bill GH₵6,600/month — the 1.5% you save covers the GH₵99.',
     features: ['Everything in Free', 'Unlimited active clients', 'Priority payout queue', 'CSV client export', 'Subscription lock-in periods', 'Branded checkout pages'],
     cta: 'Start Pro trial',
     highlight: true,
@@ -86,6 +87,7 @@ const PLANS = [
     price: '299',
     desc: 'For teams and high-volume operators.',
     commission: '0.8%',
+    breakeven: 'Beats Pro once you bill GH₵28,600/month — the extra 0.7% you save covers the GH₵200 difference.',
     features: ['Everything in Pro', 'Lowest commission rate', 'Dedicated account manager', 'Custom cancel policies', 'API access (coming soon)', 'SLA support'],
     cta: 'Contact us',
     highlight: false,
@@ -362,6 +364,11 @@ export default function LandingPage() {
                     <span className="text-amber-400 font-bold">{plan.commission}</span> platform commission per transaction
                   </span>
                 </div>
+                {(plan as { breakeven?: string }).breakeven && (
+                  <p className="text-xs text-emerald-400/90 mb-6 -mt-3">
+                    {(plan as { breakeven?: string }).breakeven}
+                  </p>
+                )}
                 <ul className="space-y-2.5 mb-8">
                   {plan.features.map((feat) => (
                     <li key={feat} className="flex items-start gap-2 text-sm text-white/60">
