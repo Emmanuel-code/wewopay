@@ -19,13 +19,19 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function ClientsPage() {
-  const { developer } = useDeveloper();
+  const { developer, loading: devLoading } = useDeveloper();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileFailed, setProfileFailed] = useState(false);
 
   useEffect(() => {
     if (developer?.id) loadClients(developer.id);
-  }, [developer?.id]);
+    else if (!devLoading) {
+      // Profile finished loading but no developer row — don't spin forever.
+      setProfileFailed(true);
+      setLoading(false);
+    }
+  }, [developer?.id, devLoading]);
 
   const loadClients = async (devId: string) => {
     try {
@@ -79,6 +85,10 @@ export default function ClientsPage() {
           <CardContent>
             {loading ? (
               <p className="py-10 text-center text-sm text-muted-foreground">Loading clients…</p>
+            ) : profileFailed ? (
+              <div className="py-10 text-center">
+                <p className="text-sm text-muted-foreground">Could not load your profile — please refresh the page.</p>
+              </div>
             ) : clients.length === 0 ? (
               <div className="py-10 text-center">
                 <p className="text-sm text-muted-foreground">No clients yet.</p>

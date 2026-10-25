@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { useDeveloper } from '@/hooks/useDeveloper';
 import { GHANA_BANKS } from '@/utils/paystack';
@@ -28,6 +28,18 @@ export default function DeveloperSettingsPage() {
   const [savingBank, setSavingBank] = useState(false);
 
   const selectedBank = GHANA_BANKS.find((b) => b.code === selectedBankCode);
+
+  // Form state is initialized before the profile finishes loading, so sync
+  // it once the profile arrives — otherwise saved values look lost on return.
+  useEffect(() => {
+    if (developer) {
+      setBusinessName(developer.business_name || '');
+      setLogoUrl(developer.logo_url || '');
+      setSelectedBankCode(developer.bank_account_number ? developer.bank_code || '' : '');
+      setAccountNumber(developer.bank_account_number || '');
+      setAccountName(developer.bank_account_name || '');
+    }
+  }, [developer?.id]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();

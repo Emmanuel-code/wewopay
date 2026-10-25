@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 
 export default function NewProjectPage() {
   const navigate = useNavigate();
-  const { developer } = useDeveloper();
+  const { developer, loading: devLoading } = useDeveloper();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -32,8 +32,12 @@ export default function NewProjectPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (devLoading) {
+      toast.error('Your profile is still loading — please wait a moment and try again');
+      return;
+    }
     if (!developer?.id) {
-      toast.error('Developer profile not loaded');
+      toast.error('Developer profile could not be loaded — please refresh the page and try again');
       return;
     }
 
@@ -252,9 +256,9 @@ export default function NewProjectPage() {
               <Button type="button" variant="ghost" onClick={() => navigate('/dashboard/projects')}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving} className="font-semibold">
+              <Button type="submit" disabled={saving || devLoading} className="font-semibold">
                 <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Creating Project...' : 'Save & Publish Project'}
+                {saving ? 'Creating Project...' : devLoading ? 'Loading profile…' : 'Save & Publish Project'}
               </Button>
             </CardFooter>
           </Card>
