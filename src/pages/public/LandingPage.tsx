@@ -10,7 +10,6 @@ import {
   Lock,
   CreditCard,
   Globe,
-  Star,
   ChevronRight,
   Repeat,
   Send,
@@ -93,29 +92,7 @@ const PLANS = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    name: 'Kwame Mensah',
-    role: 'Fullstack Developer, Accra',
-    avatar: 'KM',
-    quote: 'I used to spend hours sending invoices and chasing payments. With WewoPay, my retainer clients pay automatically every month. It\'s changed how I run my business.',
-    stars: 5,
-  },
-  {
-    name: 'Ama Owusu',
-    role: 'UI/UX Designer & Consultant',
-    avatar: 'AO',
-    quote: 'The client portal is a game changer. My clients can download their receipts without WhatsApp-ing me at midnight. Professional and clean.',
-    stars: 5,
-  },
-  {
-    name: 'Yaw Darko',
-    role: 'DevOps Engineer, Lagos',
-    avatar: 'YD',
-    quote: 'I was skeptical about using a shared Paystack account but the commission split and payout transparency convinced me. Funds arrive same-day.',
-    stars: 5,
-  },
-];
+
 
 const STEPS = [
   { step: '01', title: 'Create your account', desc: 'Sign up and complete the 2-minute onboarding to link your bank account.' },
@@ -411,35 +388,33 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── TESTIMONIALS ─── */}
+      {/* ─── WHY WEWOPAY EXISTS ─── */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white/[0.02] border-y border-white/5">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-4xl font-black mb-3">
-              Trusted by developers{' '}
-              <span className="bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
-                across Africa
+          <div className="text-center mb-6">
+            <h2 className="text-4xl font-black mb-5">
+              You do the work.{' '}
+              <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+                Getting paid shouldn&apos;t be the hard part.
               </span>
             </h2>
+            <p className="text-white/60 text-lg leading-relaxed max-w-2xl mx-auto">
+              WewoPay was built by a freelance developer in Ghana who got tired of
+              chasing invoices, begging for upfronts, and watching good work go
+              unpaid. So he built the thing he wished existed — a platform where
+              both sides are protected and nobody has to chase anybody.
+            </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="rounded-2xl border border-white/8 bg-white/[0.03] p-6">
-                <div className="flex mb-3">
-                  {Array.from({ length: t.stars }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-white/60 leading-relaxed mb-5">"{t.quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-xs font-black text-white">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white">{t.name}</p>
-                    <p className="text-xs text-white/30">{t.role}</p>
-                  </div>
-                </div>
+          <div className="grid md:grid-cols-3 gap-5 mt-12">
+            {[
+              { icon: Shield, title: 'Escrow on every milestone', desc: 'Client funds are locked until you deliver and they approve. No more working on trust alone.' },
+              { icon: Send, title: 'Clients pay without an account', desc: 'One link, no signup, no friction. If paying is easy, paying happens.' },
+              { icon: DollarSign, title: 'Payouts straight to your bank', desc: 'GHS, NGN and USD via Paystack. No registered company required.' },
+            ].map((item) => (
+              <div key={item.title} className="rounded-2xl border border-white/8 bg-white/[0.03] p-6">
+                <item.icon className="w-6 h-6 text-violet-400 mb-3" />
+                <p className="text-sm font-semibold text-white mb-2">{item.title}</p>
+                <p className="text-sm text-white/60 leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
