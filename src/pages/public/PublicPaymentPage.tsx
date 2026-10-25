@@ -41,51 +41,35 @@ export default function PublicPaymentPage() {
       setLoading(true);
       setErrorStatus(null);
 
-      // Find client by payment token
-      const { data: cData, error: cErr } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('payment_link_token', token)
-        .maybeSingle();
+      // Use secure parameterized RPC function to retrieve checkout details
+      const { data: details, error: detailsErr } = await supabase.rpc(
+        'get_payment_checkout_details',
+        { p_payment_token: token }
+      );
 
-      if (cErr || !cData) {
-        setErrorStatus('INVALID_LINK');
+      if (detailsErr || !details || details.error) {
+        const errType = details?.error || 'INVALID_LINK';
+        setErrorStatus(errType);
         return;
       }
 
-      setClient(cData as Client);
+      const clientData = details.client as Client;
+      const projectData = details.project as Project;
+      const developerData = details.developer as Developer;
 
-      if (cData.status === 'ACTIVE') {
+      setClient(clientData);
+
+      if (clientData.status === 'ACTIVE') {
         setErrorStatus('ALREADY_ACTIVE');
       }
 
-      // Fetch project
-      const { data: pData, error: pErr } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', cData.project_id)
-        .single();
-
-      if (pErr || !pData) {
-        setErrorStatus('PROJECT_NOT_FOUND');
-        return;
-      }
-
-      if (!pData.is_active) {
+      if (!projectData.is_active) {
         setErrorStatus('PROJECT_INACTIVE');
         return;
       }
 
-      setProject(pData as Project);
-
-      // Fetch developer branding
-      const { data: devData } = await supabase
-        .from('developers')
-        .select('*')
-        .eq('id', pData.developer_id)
-        .single();
-
-      setDeveloper(devData as Developer);
+      setProject(projectData);
+      setDeveloper(developerData);
     } catch (err: any) {
       console.error(err);
       setErrorStatus('ERROR');

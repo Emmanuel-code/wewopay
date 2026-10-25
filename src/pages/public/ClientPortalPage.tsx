@@ -28,35 +28,21 @@ export default function ClientPortalPage() {
     if (!token) return;
     try {
       setLoading(true);
-      const { data: cData, error: cErr } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('portal_token', token)
-        .maybeSingle();
+      // Use secure parameterized RPC function to retrieve client portal details
+      const { data: details, error: detailsErr } = await supabase.rpc('get_portal_details', {
+        p_portal_token: token,
+      });
 
-      if (cErr || !cData) {
-        toast.error('Invalid portal link');
+      if (detailsErr || !details || details.error) {
+        toast.error('Invalid or expired portal link');
         return;
       }
 
-      setClient(cData as Client);
-
-      if (cData.project_id) {
-        const { data: pData } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('id', cData.project_id)
-          .single();
-        setProject(pData as Project);
+      setClient(details.client as Client);
+      if (details.project) {
+        setProject(details.project as Project);
       }
-
-      const { data: payData } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('client_id', cData.id)
-        .order('created_at', { ascending: false });
-
-      setPayments((payData as Payment[]) || []);
+      setPayments((details.payments as Payment[]) || []);
     } catch (err: any) {
       console.error(err);
     } finally {

@@ -15,20 +15,70 @@ serve(async (req) => {
     const paystackSecret = Deno.env.get("PAYSTACK_SECRET_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
+    // 1. Enforce Authentication: Require Caller Authorization Header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      return new Response(JSON.stringify({ error: "Infrastructure configuration missing" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. Validate Caller JWT & Verify Admin Authorization
+    const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const {
+      data: { user: callerUser },
+      error: authErr,
+    } = await callerClient.auth.getUser();
+
+    if (authErr || !callerUser) {
+      return new Response(JSON.stringify({ error: "Invalid or expired session" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: callerProfile, error: profileErr } = await callerClient
+      .from("profiles")
+      .select("role")
+      .eq("id", callerUser.id)
+      .single();
+
+    if (profileErr || callerProfile?.role !== "admin") {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Platform administrator privileges required" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 3. Extract and Validate Input Parameters
     const { developerId } = await req.json();
-
-    if (!developerId) {
-      return new Response(JSON.stringify({ error: "developerId is required" }), {
+    if (!developerId || typeof developerId !== "string") {
+      return new Response(JSON.stringify({ error: "Valid developerId is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch developer details
-    const { data: dev, error: devErr } = await supabase
+    // 4. Fetch developer and verify bank account & balance
+    const { data: dev, error: devErr } = await adminClient
       .from("developers")
       .select("*")
       .eq("id", developerId)
@@ -49,11 +99,21 @@ serve(async (req) => {
       });
     }
 
+    if (!dev.bank_verified || !dev.paystack_recipient_code) {
+      return new Response(
+        JSON.stringify({ error: "Developer bank recipient code is not verified" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     let transferCode = `TRF_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
     let transferId = `ID_${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // If live Paystack secret key is provided, execute transfer via Paystack Transfer API
-    if (paystackSecret && !paystackSecret.includes("xxxxxxxx") && dev.paystack_recipient_code) {
+    // 5. Execute transfer via Paystack Transfer API if secret key is present
+    if (paystackSecret && !paystackSecret.includes("xxxxxxxx")) {
       const res = await fetch("https://api.paystack.co/transfer", {
         method: "POST",
         headers: {
@@ -64,24 +124,32 @@ serve(async (req) => {
           source: "balance",
           amount: Math.round(payoutAmount * 100),
           recipient: dev.paystack_recipient_code,
-          reason: `wewopay Developer Subscription Payout - ${dev.name}`,
+          reason: `wewopay Developer Payout - ${dev.name}`,
         }),
       });
-      const data = await res.json();
-      if (data.status && data.data?.transfer_code) {
-        transferCode = data.data.transfer_code;
-        transferId = String(data.data.id || transferId);
+
+      const transferResponse = await res.json();
+      if (!transferResponse.status) {
+        throw new Error(transferResponse.message || "Failed to initiate Paystack transfer");
+      }
+
+      if (transferResponse.data?.transfer_code) {
+        transferCode = transferResponse.data.transfer_code;
+        transferId = String(transferResponse.data.id || transferId);
       }
     }
 
-    // Execute atomic DB function
-    const { data: rpcRes, error: rpcErr } = await supabase.rpc("execute_developer_payout", {
+    // 6. Execute atomic DB function
+    const { error: rpcErr } = await adminClient.rpc("execute_developer_payout", {
       p_developer_id: dev.id,
       p_transfer_code: transferCode,
       p_transfer_id: transferId,
     });
 
-    if (rpcErr) throw rpcErr;
+    if (rpcErr) {
+      console.error("RPC error during execute_developer_payout:", rpcErr);
+      throw rpcErr;
+    }
 
     return new Response(
       JSON.stringify({
@@ -96,7 +164,8 @@ serve(async (req) => {
       }
     );
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("Disburse payout error:", err);
+    return new Response(JSON.stringify({ error: err.message || "Internal error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
