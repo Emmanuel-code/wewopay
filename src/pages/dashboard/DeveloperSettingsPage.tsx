@@ -21,7 +21,7 @@ export default function DeveloperSettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Bank Form
-  const [selectedBankCode, setSelectedBankCode] = useState(developer?.bank_code || 'ECOGHAC');
+  const [selectedBankCode, setSelectedBankCode] = useState(developer?.bank_account_number ? developer?.bank_code || '' : '');
   const [accountNumber, setAccountNumber] = useState(developer?.bank_account_number || '');
   const [accountName, setAccountName] = useState(developer?.bank_account_name || '');
   const [verifyingBank, setVerifyingBank] = useState(false);
@@ -50,6 +50,10 @@ export default function DeveloperSettingsPage() {
       toast.error('Enter bank account number');
       return;
     }
+    if (!selectedBank) {
+      toast.error('Select your bank');
+      return;
+    }
     setVerifyingBank(true);
     try {
       let resolvedName = `${developer?.name?.toUpperCase() || 'DEVELOPER'} ENTERPRISE / ${selectedBank?.name.toUpperCase()}`;
@@ -67,7 +71,7 @@ export default function DeveloperSettingsPage() {
       const recipientCode = `RCP_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
       await updateDeveloper({
-        bank_name: selectedBank?.name || 'Ecobank Ghana',
+        bank_name: selectedBank?.name ?? null,
         bank_code: selectedBankCode,
         bank_account_number: accountNumber.trim(),
         bank_account_name: resolvedName,
@@ -167,7 +171,7 @@ export default function DeveloperSettingsPage() {
                 <Label>Bank Name</Label>
                 <Select value={selectedBankCode} onValueChange={setSelectedBankCode}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select your bank" />
                   </SelectTrigger>
                   <SelectContent>
                     {GHANA_BANKS.map((bank) => (

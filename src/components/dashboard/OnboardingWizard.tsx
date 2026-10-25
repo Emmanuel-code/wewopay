@@ -19,7 +19,7 @@ export default function OnboardingWizard({ developer, onComplete, onDismiss }: O
   const [step, setStep] = useState(1);
   const [businessName, setBusinessName] = useState(developer.business_name || '');
   const [logoUrl, setLogoUrl] = useState(developer.logo_url || '');
-  const [selectedBankCode, setSelectedBankCode] = useState(developer.bank_code || 'ECOGHAC');
+  const [selectedBankCode, setSelectedBankCode] = useState(developer.bank_account_number ? developer.bank_code || '' : '');
   const [accountNumber, setAccountNumber] = useState(developer.bank_account_number || '');
   const [accountName, setAccountName] = useState(developer.bank_account_name || '');
   const [verifying, setVerifying] = useState(false);
@@ -31,6 +31,10 @@ export default function OnboardingWizard({ developer, onComplete, onDismiss }: O
   const handleVerifyBank = async () => {
     if (!accountNumber || accountNumber.length < 8) {
       toast.error('Please enter a valid bank account number');
+      return;
+    }
+    if (!selectedBank) {
+      toast.error('Select your bank');
       return;
     }
 
@@ -51,13 +55,17 @@ export default function OnboardingWizard({ developer, onComplete, onDismiss }: O
   };
 
   const handleFinish = async () => {
+    if (!selectedBank) {
+      toast.error('Select your bank');
+      return;
+    }
     setSaving(true);
     try {
       const recipientCode = `RCP_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
       await onComplete({
         business_name: businessName,
         logo_url: logoUrl || null,
-        bank_name: selectedBank?.name || 'Ecobank Ghana',
+        bank_name: selectedBank?.name ?? null,
         bank_code: selectedBankCode,
         bank_account_number: accountNumber,
         bank_account_name: accountName || `${developer.name} Business Account`,

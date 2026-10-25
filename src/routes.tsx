@@ -10,9 +10,12 @@ import ProjectSettingsPage from './pages/dashboard/projects/ProjectSettingsPage'
 import NewClientPage from './pages/dashboard/projects/NewClientPage';
 import ClientDetailPage from './pages/dashboard/projects/ClientDetailPage';
 import EarningsPage from './pages/dashboard/EarningsPage';
+import ClientsPage from './pages/dashboard/ClientsPage';
 import DeveloperSettingsPage from './pages/dashboard/DeveloperSettingsPage';
 import PublicPaymentPage from './pages/public/PublicPaymentPage';
 import ClientPortalPage from './pages/public/ClientPortalPage';
+import TermsPage from './pages/public/TermsPage';
+import PrivacyPage from './pages/public/PrivacyPage';
 import AdminHomePage from './pages/admin/AdminHomePage';
 import AdminDevelopersPage from './pages/admin/AdminDevelopersPage';
 import AdminPayoutsQueuePage from './pages/admin/AdminPayoutsQueuePage';
@@ -34,6 +37,8 @@ export const routes: RouteConfig[] = [
   // Public Endpoints (Client checkout & portal)
   { path: '/pay/:token', element: <PublicPaymentPage />, public: true },
   { path: '/portal/:token', element: <ClientPortalPage />, public: true },
+  { path: '/terms', element: <TermsPage />, public: true },
+  { path: '/privacy', element: <PrivacyPage />, public: true },
 
   // Developer Dashboard (Protected)
   { path: '/dashboard', element: <DashboardHomePage /> },
@@ -43,6 +48,7 @@ export const routes: RouteConfig[] = [
   { path: '/dashboard/projects/:projectId/settings', element: <ProjectSettingsPage /> },
   { path: '/dashboard/projects/:projectId/clients/new', element: <NewClientPage /> },
   { path: '/dashboard/projects/:projectId/clients/:clientId', element: <ClientDetailPage /> },
+  { path: '/dashboard/clients', element: <ClientsPage /> },
   { path: '/dashboard/earnings', element: <EarningsPage /> },
   { path: '/dashboard/settings', element: <DeveloperSettingsPage /> },
 

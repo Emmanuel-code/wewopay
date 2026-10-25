@@ -222,8 +222,8 @@ export default function SignupPage() {
                   htmlFor="terms"
                   className="text-xs text-muted-foreground leading-snug cursor-pointer"
                 >
-                  I agree to the <span className="text-foreground underline">User Agreement</span> and{' '}
-                  <span className="text-foreground underline">Privacy Policy</span>. I understand all client payments flow through wewopay's verified Paystack account and are disbursed to my bank account.
+                  I agree to the <Link to="/terms" className="text-foreground underline">User Agreement</Link> and{' '}
+                  <Link to="/privacy" className="text-foreground underline">Privacy Policy</Link>. I understand all client payments flow through wewopay's verified Paystack account and are disbursed to my bank account.
                 </label>
               </div>
 

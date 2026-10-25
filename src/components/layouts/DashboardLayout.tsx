@@ -5,6 +5,7 @@ import { useDeveloper } from '@/hooks/useDeveloper';
 import {
   LayoutDashboard,
   FolderGit2,
+  Users,
   DollarSign,
   Settings,
   Shield,
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Projects', href: '/dashboard/projects', icon: FolderGit2 },
+    { name: 'Clients', href: '/dashboard/clients', icon: Users },
     { name: 'Earnings & Payouts', href: '/dashboard/earnings', icon: DollarSign },
     { name: 'Account Settings', href: '/dashboard/settings', icon: Settings },
   ];

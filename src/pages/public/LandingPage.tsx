@@ -68,7 +68,7 @@ const PLANS = [
     price: '0',
     desc: 'Get started at no cost.',
     commission: '3.0%',
-    features: ['Unlimited projects', 'Up to 10 active clients', 'Payment links & portals', 'GHS & NGN support', 'Basic email receipts'],
+    features: ['Unlimited projects', 'Up to 10 active clients', 'Payment links & portals', 'GHS, NGN & USD support', 'Basic email receipts'],
     cta: 'Get started free',
     highlight: false,
   },

@@ -76,6 +76,14 @@ export default function EarningsPage() {
     toast.success('Payout records CSV downloaded');
   };
 
+  // Payout example figures, computed from the viewer's own tier so the
+  // explainer never shows another tier's commission rate.
+  const tierRate = developer?.commission_rate ?? 3.0;
+  const exampleInvoice = 500;
+  const examplePaystackFee = exampleInvoice * 0.015;
+  const examplePlatformFee = (exampleInvoice * tierRate) / 100;
+  const exampleNet = exampleInvoice - examplePaystackFee - examplePlatformFee;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -164,7 +172,7 @@ export default function EarningsPage() {
                 How Paystack Single-Account Payouts Work:
               </p>
               <p className="text-muted-foreground">
-                When a client pays your GHS 500 invoice, Paystack charges 1.5% (~GHS 7.50). The platform deducts your tier commission (1.5% = GHS 7.50). The remaining GHS 485.00 is credited immediately to your Pending Balance and batched directly into your bank: <strong>{developer?.bank_name} ({developer?.bank_account_number ? `••••${developer.bank_account_number.slice(-4)}` : 'Not set'})</strong>.
+                When a client pays your GHS 500 invoice, Paystack charges 1.5% (~GHS {examplePaystackFee.toFixed(2)}). The platform deducts your {developer?.plan || 'FREE'} tier commission ({tierRate}% = GHS {examplePlatformFee.toFixed(2)}). The remaining GHS {exampleNet.toFixed(2)} is credited immediately to your Pending Balance and batched directly into your bank: <strong>{developer?.bank_account_number ? `${developer.bank_name} (••••${developer.bank_account_number.slice(-4)})` : 'Not set'}</strong>.
               </p>
             </div>
           </div>

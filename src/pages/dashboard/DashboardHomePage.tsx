@@ -30,6 +30,7 @@ export default function DashboardHomePage() {
   const [revenue30d, setRevenue30d] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
 
   useEffect(() => {
     if (developer?.id) {
@@ -39,6 +40,17 @@ export default function DashboardHomePage() {
       }
     }
   }, [developer?.id]);
+
+  // Only show loading skeletons if loading drags on — fast loads should
+  // never flash placeholder blocks.
+  useEffect(() => {
+    if (!devLoading && !dataLoading) {
+      setShowSkeleton(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSkeleton(true), 400);
+    return () => clearTimeout(timer);
+  }, [devLoading, dataLoading]);
 
   const loadDashboardData = async (devId: string) => {
     try {
@@ -132,6 +144,13 @@ export default function DashboardHomePage() {
   }).length;
 
   if (devLoading || dataLoading) {
+    if (!showSkeleton) {
+      return (
+        <DashboardLayout>
+          <div />
+        </DashboardLayout>
+      );
+    }
     return (
       <DashboardLayout>
         <div className="space-y-6">
