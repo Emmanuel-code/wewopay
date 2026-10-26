@@ -122,6 +122,7 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+            <a href="#about" className="hover:text-white transition-colors">About</a>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/login">
@@ -406,9 +407,9 @@ export default function LandingPage() {
               </span>
             </h2>
             <p className="text-white/60 text-lg leading-relaxed max-w-2xl mx-auto">
-              WewoPay was built by a freelance developer in Ghana who got tired of
-              chasing invoices, begging for upfronts, and watching good work go
-              unpaid. So he built the thing he wished existed — a platform where
+              WewoPay was built by Emmanuel Jimah Bakeri, a freelance developer in Ghana
+              who got tired of chasing invoices, begging for upfronts, and watching good
+              work go unpaid. So he built the thing he wished existed — a platform where
               both sides are protected and nobody has to chase anybody.
             </p>
           </div>
@@ -425,6 +426,27 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ─── ABOUT THE FOUNDER ─── */}
+      <section id="about" className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-black mb-4">
+            About the founder
+          </h2>
+          <p className="text-xl font-semibold text-white mb-1">
+            Emmanuel Jimah Bakeri
+          </p>
+          <p className="text-white/50 mb-6">
+            Developer, CEO &amp; Founder of WewoPay
+          </p>
+          <p className="text-white/60 text-lg leading-relaxed max-w-2xl mx-auto">
+            Emmanuel is a freelance developer in Ghana. He built WewoPay out of his
+            own experience getting paid as a developer — chasing invoices, begging
+            for upfronts, and watching good work go unpaid — so other developers
+            can get paid on autopilot, without a company.
+          </p>
         </div>
       </section>
 
@@ -508,6 +530,7 @@ export default function LandingPage() {
                 <a href="#features" className="block text-white/30 hover:text-white transition-colors">Features</a>
                 <a href="#pricing" className="block text-white/30 hover:text-white transition-colors">Pricing</a>
                 <a href="#how-it-works" className="block text-white/30 hover:text-white transition-colors">How it works</a>
+                <a href="#about" className="block text-white/30 hover:text-white transition-colors">About</a>
               </div>
               <div className="space-y-2">
                 <p className="text-white/60 font-semibold mb-3">Account</p>
