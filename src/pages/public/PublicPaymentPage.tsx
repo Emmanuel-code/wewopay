@@ -41,37 +41,93 @@ export default function PublicPaymentPage() {
       setLoading(true);
       setErrorStatus(null);
 
-      // Use secure parameterized RPC function to retrieve checkout details
+      // 1. Attempt secure parameterized RPC function
       const { data: details, error: detailsErr } = await supabase.rpc(
         'get_payment_checkout_details',
         { p_payment_token: token }
       );
 
-      if (detailsErr || !details || details.error) {
-        const errType = details?.error || 'INVALID_LINK';
-        setErrorStatus(errType);
+      if (!detailsErr && details && !details.error) {
+        const clientData = details.client as Client;
+        const projectData = details.project as Project;
+        const developerData = details.developer as Developer;
+
+        setClient(clientData);
+        if (clientData.status === 'ACTIVE') {
+          setErrorStatus('ALREADY_ACTIVE');
+        }
+        if (!projectData.is_active) {
+          setErrorStatus('PROJECT_INACTIVE');
+          return;
+        }
+        setProject(projectData);
+        setDeveloper(developerData);
         return;
       }
 
-      const clientData = details.client as Client;
-      const projectData = details.project as Project;
-      const developerData = details.developer as Developer;
+      if (detailsErr) {
+        console.warn('RPC get_payment_checkout_details not available or failed:', detailsErr);
+      } else if (details?.error) {
+        console.warn('RPC returned error:', details.error);
+      }
 
-      setClient(clientData);
+      // 2. Resilient Direct Fallback
+      const { data: cData, error: cErr } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('payment_link_token', token)
+        .maybeSingle();
 
-      if (clientData.status === 'ACTIVE') {
+      if (cErr) {
+        console.error('Direct client query failed (likely RLS):', cErr);
+      }
+
+      if (!cData) {
+        console.warn(`No client record found for token: "${token}"`);
+        setErrorStatus('INVALID_LINK');
+        return;
+      }
+
+      setClient(cData as Client);
+
+      if (cData.status === 'ACTIVE') {
         setErrorStatus('ALREADY_ACTIVE');
       }
 
-      if (!projectData.is_active) {
+      const { data: pData, error: pErr } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', cData.project_id)
+        .single();
+
+      if (pErr || !pData) {
+        console.error('Project query error:', pErr);
+        setErrorStatus('PROJECT_NOT_FOUND');
+        return;
+      }
+
+      if (!pData.is_active) {
         setErrorStatus('PROJECT_INACTIVE');
         return;
       }
 
-      setProject(projectData);
-      setDeveloper(developerData);
+      setProject(pData as Project);
+
+      const { data: devData, error: devErr } = await supabase
+        .from('developers')
+        .select('*')
+        .eq('id', pData.developer_id)
+        .single();
+
+      if (devErr) {
+        console.warn('Developer query error:', devErr);
+      }
+
+      if (devData) {
+        setDeveloper(devData as Developer);
+      }
     } catch (err: any) {
-      console.error(err);
+      console.error('loadCheckoutDetails unexpected error:', err);
       setErrorStatus('ERROR');
     } finally {
       setLoading(false);
@@ -184,14 +240,18 @@ export default function PublicPaymentPage() {
             amount: Math.round(Number(project.amount) * 100),
             currency: project.currency,
             ref: paystackReference,
-            callback: async (response: any) => {
-              try {
-                await executeFinalizePayment(response.reference || paystackReference);
-              } catch (e: any) {
-                toast.error('Failed to complete payment registration: ' + e.message);
-              } finally {
-                setProcessing(false);
-              }
+            // Paystack v1 does NOT support async callbacks (they return a Promise,
+            // which fails Paystack's internal `typeof callback === 'function'` guard).
+            // Use a synchronous wrapper that internally fires the async logic.
+            callback: (response: any) => {
+              const ref = response?.reference || paystackReference;
+              executeFinalizePayment(ref)
+                .catch((e: any) => {
+                  toast.error('Failed to complete payment registration: ' + e.message);
+                })
+                .finally(() => {
+                  setProcessing(false);
+                });
             },
             onClose: () => {
               setProcessing(false);

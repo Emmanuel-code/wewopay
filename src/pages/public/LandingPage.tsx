@@ -88,7 +88,7 @@ const PLANS = [
     desc: 'For teams and high-volume operators.',
     commission: '0.8%',
     breakeven: 'Beats Pro once you bill GH₵28,600/month — the extra 0.7% you save covers the GH₵200 difference.',
-    features: ['Everything in Pro', 'Lowest commission rate', 'Dedicated account manager', 'Custom cancel policies', 'API access (coming soon)', 'SLA support'],
+    features: ['Everything in Pro', 'Lowest commission rate', 'Dedicated account manager', 'Custom cancel policies', 'Direct REST API access', 'SLA support'],
     cta: 'Contact us',
     highlight: false,
   },

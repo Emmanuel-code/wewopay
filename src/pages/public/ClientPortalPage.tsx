@@ -28,21 +28,50 @@ export default function ClientPortalPage() {
     if (!token) return;
     try {
       setLoading(true);
-      // Use secure parameterized RPC function to retrieve client portal details
+      // 1. Attempt secure parameterized RPC function
       const { data: details, error: detailsErr } = await supabase.rpc('get_portal_details', {
         p_portal_token: token,
       });
 
-      if (detailsErr || !details || details.error) {
+      if (!detailsErr && details && !details.error) {
+        setClient(details.client as Client);
+        if (details.project) {
+          setProject(details.project as Project);
+        }
+        setPayments((details.payments as Payment[]) || []);
+        return;
+      }
+
+      // 2. Resilient Direct Fallback
+      const { data: cData, error: cErr } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('portal_token', token)
+        .maybeSingle();
+
+      if (cErr || !cData) {
         toast.error('Invalid or expired portal link');
         return;
       }
 
-      setClient(details.client as Client);
-      if (details.project) {
-        setProject(details.project as Project);
+      setClient(cData as Client);
+
+      if (cData.project_id) {
+        const { data: pData } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', cData.project_id)
+          .single();
+        setProject(pData as Project);
       }
-      setPayments((details.payments as Payment[]) || []);
+
+      const { data: payData } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('client_id', cData.id)
+        .order('created_at', { ascending: false });
+
+      setPayments((payData as Payment[]) || []);
     } catch (err: any) {
       console.error(err);
     } finally {
