@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/db/supabase';
 import { Client, Project, Developer } from '@/types/types';
-import { formatCurrency, calculatePaymentSplits } from '@/utils/paystack';
+import { formatCurrency } from '@/utils/paystack';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -134,70 +134,28 @@ export default function PublicPaymentPage() {
     }
   };
 
+  // Record the payment through the server-side verify function. The checkout
+  // page runs as anon, and migration 00004 revoked anon's execute on
+  // record_successful_payment (service_role only) — so the page must NOT
+  // write the ledger directly, and must not be given that power back.
+  // The edge function verifies the reference with Paystack's secret key,
+  // checks amount/currency/email against the project, and only then records
+  // it with the service role. A fake reference records nothing.
   const executeFinalizePayment = async (paystackReference: string) => {
     if (!client || !project || !developer) return;
-    const splits = calculatePaymentSplits(
-      Number(project.amount),
-      Number(developer.commission_rate || 3.0),
-      project.currency
-    );
 
-    const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const nextBilling = new Date();
-    if (project.billing_cycle === 'MONTHLY') nextBilling.setMonth(nextBilling.getMonth() + 1);
-    else if (project.billing_cycle === 'QUARTERLY') nextBilling.setMonth(nextBilling.getMonth() + 3);
-    else if (project.billing_cycle === 'ANNUALLY') nextBilling.setFullYear(nextBilling.getFullYear() + 1);
-
-    const nextBillingDate = project.billing_cycle === 'ONE_TIME' ? null : nextBilling.toISOString();
-    const cusCode = `CUS_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-    const subCode = project.billing_cycle === 'ONE_TIME' ? null : `SUB_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-
-    // Execute atomic RPC in database
-    const { error: rpcErr } = await supabase.rpc('record_successful_payment', {
-      p_client_id: client.id,
-      p_paystack_ref: paystackReference,
-      p_gross_amount: splits.grossAmount,
-      p_paystack_fee: splits.paystackFee,
-      p_platform_fee: splits.platformFee,
-      p_developer_amount: splits.developerAmount,
-      p_currency: project.currency,
-      p_invoice_number: invNumber,
-      p_paystack_customer_code: cusCode,
-      p_subscription_code: subCode,
-      p_next_billing_date: nextBillingDate,
+    const { data, error } = await supabase.functions.invoke('verify-client-payment', {
+      body: { reference: paystackReference, client_id: client.id },
     });
 
-    if (rpcErr) {
-      // Fallback direct execution if migration RPC not yet applied in remote Supabase
-      const { error: payErr } = await supabase.from('payments').insert({
-        client_id: client.id,
-        paystack_ref: paystackReference,
-        gross_amount: splits.grossAmount,
-        paystack_fee: splits.paystackFee,
-        platform_fee: splits.platformFee,
-        developer_amount: splits.developerAmount,
-        currency: project.currency,
-        status: 'SUCCESS',
-        paid_at: new Date().toISOString(),
-        invoice_number: invNumber,
-      });
-      if (payErr) throw payErr;
-
-      await supabase
-        .from('clients')
-        .update({
-          status: 'ACTIVE',
-          accepted_terms_at: new Date().toISOString(),
-          subscription_start_date: new Date().toISOString(),
-          next_billing_date: nextBillingDate,
-          paystack_customer_code: cusCode,
-          subscription_code: subCode,
-          retry_count: 0,
-        })
-        .eq('id', client.id);
+    if (error) {
+      throw new Error(error.message || 'Payment verification failed');
+    }
+    if (!data?.success) {
+      throw new Error(data?.error || 'Payment could not be verified');
     }
 
-    setInvoiceRef(invNumber);
+    setInvoiceRef(data.invoice_number || '');
     setPaymentSuccess(true);
     toast.success('Payment authorized via Paystack!');
   };
@@ -240,6 +198,9 @@ export default function PublicPaymentPage() {
             amount: Math.round(Number(project.amount) * 100),
             currency: project.currency,
             ref: paystackReference,
+            // Lets the paystack-webhook match this payment to the client
+            // exactly instead of falling back to an email match.
+            metadata: { client_id: client.id, project_id: project.id },
             // Paystack v1 does NOT support async callbacks (they return a Promise,
             // which fails Paystack's internal `typeof callback === 'function'` guard).
             // Use a synchronous wrapper that internally fires the async logic.
@@ -263,9 +224,11 @@ export default function PublicPaymentPage() {
         }
       }
 
-      // Test mode / demo gateway simulation
-      await new Promise((r) => setTimeout(r, 1200));
-      await executeFinalizePayment(paystackReference);
+      // No Paystack key configured: there is no real transaction to verify,
+      // and recording one without verification would reopen the ledger hole
+      // closed by migration 00004 — so fail loudly instead of simulating.
+      toast.error('Payment is not configured: no Paystack public key found');
+      return;
     } catch (err: any) {
       console.error(err);
       toast.error('Payment failed: ' + err.message);
@@ -560,3 +523,4 @@ export default function PublicPaymentPage() {
     </div>
   );
 }
+
