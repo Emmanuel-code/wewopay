@@ -37,8 +37,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   ];
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/login');
+    try {
+      await signOut();
+    } finally {
+      // Navigate even if sign-out itself failed: the user asked to leave,
+      // and the route guard redirects signed-out users to /login anyway.
+      navigate('/login');
+    }
   };
 
   return (
@@ -242,3 +247,4 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   );
 }
+

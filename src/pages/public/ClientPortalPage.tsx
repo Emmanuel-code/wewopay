@@ -87,10 +87,16 @@ export default function ClientPortalPage() {
     if (!client) return;
     try {
       setCancelling(true);
-      await supabase
-        .from('clients')
-        .update({ status: 'CANCELLED' })
-        .eq('id', client.id);
+      // Cancel through the token-verified RPC: the portal runs as anon, and
+      // 00004 removed anon's direct UPDATE on clients. The old code wrote
+      // directly and never checked the error, so clients saw a success toast
+      // while the subscription stayed ACTIVE. Only confirm on RPC success.
+      const { data, error } = await supabase.rpc('cancel_subscription_by_token', {
+        p_portal_token: token,
+        p_client_id: client.id,
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error('Cancellation was not confirmed');
 
       setClient({ ...client, status: 'CANCELLED' });
       setShowCancelModal(false);
@@ -341,3 +347,4 @@ export default function ClientPortalPage() {
     </div>
   );
 }
+

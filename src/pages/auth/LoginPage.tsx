@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -55,16 +55,6 @@ export default function LoginPage() {
       toast.error(err.message || 'Login failed');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fillQuickAccount = (type: 'admin' | 'dev') => {
-    if (type === 'admin') {
-      setEmail('admin@medo.dev');
-      setPassword(import.meta.env['VITE_DEMO_ADMIN_PASSWORD'] || '');
-    } else {
-      setEmail('dev@medo.dev');
-      setPassword(import.meta.env['VITE_DEMO_DEV_PASSWORD'] || '');
     }
   };
 
@@ -143,36 +133,6 @@ export default function LoginPage() {
                 {loading ? 'Authenticating...' : 'Sign In'}
                 {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
               </Button>
-
-              {/* Quick fill demo credentials for reviewers */}
-              <div className="pt-2 border-t border-border/40">
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                  <span className="flex items-center gap-1 font-medium text-foreground/80">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Quick Demo Credentials:
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => fillQuickAccount('dev')}
-                  >
-                    Kwame (Developer)
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => fillQuickAccount('admin')}
-                  >
-                    Owner (Admin)
-                  </Button>
-                </div>
-              </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-3 pt-0">
               <div className="text-center text-sm text-muted-foreground">
@@ -192,3 +152,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

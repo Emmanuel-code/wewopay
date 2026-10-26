@@ -104,7 +104,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Never let sign-out hang the UI: the old code awaited the server-side
+    // revoke unconditionally, so a stalled session left the Sign out button
+    // doing visibly nothing (navigation below it never ran). Race the
+    // revoke against a short timeout, then clear local state regardless —
+    // a failed server revoke must not trap the user in a signed-in UI.
+    try {
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
+    } catch {
+      // Ignore: local state clears below regardless.
+    }
     setUser(null);
     setSession(null);
     setProfile(null);

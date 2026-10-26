@@ -51,7 +51,28 @@ export default function NewClientPage() {
 
       if (error) throw error;
 
-      toast.success(`Client ${name} added! Payment link generated and email queued.`);
+      // Invitation email (best effort): the client already exists, so a
+      // failed send must never fail creation — fall back to telling the
+      // developer to share the link manually instead of claiming an email
+      // went out. Previously the UI promised an email that was never sent.
+      let inviteSent = false;
+      try {
+        const { data: inviteData, error: inviteErr } = await supabase.functions.invoke('send-client-invite', {
+          body: {
+            client_id: data.id,
+            payment_link_url: `${window.location.origin}/pay/${paymentToken}`,
+          },
+        });
+        inviteSent = !inviteErr && !!inviteData?.success;
+      } catch {
+        inviteSent = false;
+      }
+
+      toast.success(
+        inviteSent
+          ? `Client ${name} added! Invitation email sent.`
+          : `Client ${name} added! Email couldn't be sent — share the payment link manually.`
+      );
       navigate(`/dashboard/projects/${projectId}/clients/${data.id}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to add client');
@@ -80,7 +101,7 @@ export default function NewClientPage() {
             <CardHeader>
               <CardTitle className="text-lg">Client Contact & Billing Info</CardTitle>
               <CardDescription>
-                The client will be sent an invitation email containing their direct Paystack checkout link.
+                An invitation email with the direct Paystack checkout link is sent when email delivery is configured — otherwise, share the payment link with your client directly.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -160,3 +181,4 @@ export default function NewClientPage() {
     </DashboardLayout>
   );
 }
+

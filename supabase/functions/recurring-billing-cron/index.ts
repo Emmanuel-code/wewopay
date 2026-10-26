@@ -23,6 +23,18 @@ serve(async (req) => {
       });
     }
 
+    // Caller authentication, fail closed: this endpoint moves real money,
+    // so it must not be invocable by anyone holding the public anon key.
+    // Set CRON_SECRET in the edge function secrets and send it as the
+    // x-cron-secret header from the scheduler. Without it, refuse.
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (!cronSecret || req.headers.get("x-cron-secret") !== cronSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. Query all active clients due for billing today
@@ -73,13 +85,26 @@ serve(async (req) => {
           console.error(`Charge error for client ${client.id}:`, e);
         }
       } else {
-        // Sandbox mock charge
-        chargeSuccess = true;
+        // No usable secret key: NEVER fabricate a charge. Recording a
+        // payment here without moving money would invent revenue, advance
+        // the billing date, and credit the developer for nothing. Skip the
+        // client and report it, so a misconfigured deploy is visible
+        // instead of silently minting fake payments.
+        results.push({ clientId: client.id, status: "skipped_no_key" });
+        continue;
       }
 
       if (chargeSuccess) {
-        // Calculate splits
-        const commissionRate = 3.0;
+        // Use the developer's actual commission rate (PRO 1.5% / Business
+        // 0.8% / Free 3.0%). The old hardcoded 3.0% overcharged the
+        // platform fee — and under-credited the developer — on every
+        // recurring charge for paying developers.
+        const { data: dev } = await supabase
+          .from("developers")
+          .select("commission_rate")
+          .eq("id", client.project.developer_id)
+          .maybeSingle();
+        const commissionRate = Number(dev?.commission_rate ?? 3.0);
         const grossInCents = Math.round(grossAmount * 100);
         const paystackFeeInCents = Math.round(grossInCents * 0.015);
         const platformFeeInCents = Math.round((grossInCents * commissionRate) / 100);
@@ -137,3 +162,4 @@ serve(async (req) => {
     });
   }
 });
+
