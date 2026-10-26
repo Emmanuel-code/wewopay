@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wewopay.vercel.app/sitemap.xml
