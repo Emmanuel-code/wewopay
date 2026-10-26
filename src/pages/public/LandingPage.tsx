@@ -435,6 +435,15 @@ export default function LandingPage() {
           <h2 className="text-3xl sm:text-4xl font-black mb-4">
             About the founder
           </h2>
+          {/* Founder photo: place the portrait at public/images/founder.jpg.
+              It hides itself until that file exists, so the page never shows
+              a broken image. */}
+          <img
+            src="/images/founder.jpg"
+            alt="Emmanuel Jimah Bakeri, Founder of WewoPay"
+            className="w-36 h-36 rounded-full object-cover mx-auto mb-5 border-2 border-white/15"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
           <p className="text-xl font-semibold text-white mb-1">
             Emmanuel Jimah Bakeri
           </p>
@@ -446,6 +455,12 @@ export default function LandingPage() {
             own experience getting paid as a developer — chasing invoices, begging
             for upfronts, and watching good work go unpaid — so other developers
             can get paid on autopilot, without a company.
+          </p>
+          <p className="text-white/60 text-lg leading-relaxed max-w-2xl mx-auto mt-5">
+            WewoPay is an automated milestone escrow and developer payment
+            platform: developers create retainer plans, collect client payments
+            via Paystack, and receive payouts straight to their bank — in GHS,
+            NGN and USD, with no registered company required.
           </p>
         </div>
       </section>
