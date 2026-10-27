@@ -149,7 +149,15 @@ export default function PublicPaymentPage() {
     });
 
     if (error) {
-      throw new Error(error.message || 'Payment verification failed');
+      let serverErrorMsg = error.message;
+      try {
+        if ((error as any).context && typeof (error as any).context.json === 'function') {
+          const body = await (error as any).context.json();
+          if (body?.error) serverErrorMsg = body.error;
+        }
+      } catch (_) {}
+      console.error('Payment verification failed:', error, serverErrorMsg);
+      throw new Error(serverErrorMsg || 'Payment verification failed');
     }
     if (!data?.success) {
       throw new Error(data?.error || 'Payment could not be verified');
