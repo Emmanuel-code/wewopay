@@ -21,6 +21,11 @@ BEGIN
   END IF;
 END $$;
 
+-- Ensure updated_at exists on all core entities
+ALTER TABLE public.developers ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
 -- =========================================================================
 -- 2. HARDEN CLIENTS RLS: Drop Permissive Static Policies
 -- =========================================================================
@@ -82,8 +87,7 @@ BEGIN
       'name', v_client.name,
       'email', v_client.email,
       'status', v_client.status,
-      'currency', v_client.currency,
-      'custom_amount', v_client.custom_amount,
+      'currency', v_project.currency,
       'project_id', v_client.project_id
     ),
     'project', row_to_json(v_project),

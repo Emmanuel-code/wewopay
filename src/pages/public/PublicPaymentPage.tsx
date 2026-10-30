@@ -17,6 +17,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateInvoicePdf } from '@/utils/invoiceGenerator';
 
 export default function PublicPaymentPage() {
   const { token } = useParams<{ token: string }>();
@@ -348,7 +349,23 @@ export default function PublicPaymentPage() {
             <Button
               variant="outline"
               className="flex-1 text-xs"
-              onClick={() => toast.success('Downloaded official tax invoice PDF')}
+              onClick={() => {
+                generateInvoicePdf({
+                  invoiceNumber: invoiceRef || `INV-${new Date().getFullYear()}-001`,
+                  date: new Date().toLocaleDateString('en-GB'),
+                  businessName: developer?.business_name || developer?.name || 'Developer Studio',
+                  developerName: developer?.name || '',
+                  developerEmail: developer?.email || '',
+                  clientName: client?.name || '',
+                  clientEmail: client?.email || '',
+                  projectName: project?.name || 'Retainer Service',
+                  projectDescription: project?.description,
+                  billingCycle: project?.billing_cycle || 'MONTHLY',
+                  amount: Number(project?.amount || 0),
+                  currency: project?.currency || 'GHS',
+                  status: 'PAID',
+                });
+              }}
             >
               <Download className="w-3.5 h-3.5 mr-1.5" />
               Download Receipt PDF

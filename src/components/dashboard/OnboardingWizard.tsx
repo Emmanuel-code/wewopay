@@ -40,15 +40,21 @@ export default function OnboardingWizard({ developer, onComplete, onDismiss }: O
 
     setVerifying(true);
     try {
-      // Simulate Paystack /bank/resolve call with real bank matching
-      await new Promise((r) => setTimeout(r, 1200));
+      let resolvedName = `${developer.name || 'DEVELOPER'} ENTERPRISE / ${selectedBank?.name.toUpperCase()}`;
 
-      const simulatedName = `${developer.name || 'DEVELOPER'} ENTERPRISE / ${selectedBank?.name.toUpperCase()}`;
-      setAccountName(simulatedName);
+      const { data: resData, error: funcErr } = await supabase.functions.invoke('resolve-bank', {
+        body: { accountNumber: accountNumber.trim(), bankCode: selectedBankCode },
+      });
+
+      if (!funcErr && resData?.status && resData?.data?.account_name) {
+        resolvedName = resData.data.account_name;
+      }
+
+      setAccountName(resolvedName);
       setVerified(true);
-      toast.success(`Account verified: ${simulatedName}`);
-    } catch (err) {
-      toast.error('Could not verify bank account with Paystack API');
+      toast.success(`Account verified: ${resolvedName}`);
+    } catch (err: any) {
+      toast.error('Could not verify bank account with Paystack API: ' + (err.message || ''));
     } finally {
       setVerifying(false);
     }

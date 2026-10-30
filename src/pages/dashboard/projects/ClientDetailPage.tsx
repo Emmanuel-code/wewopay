@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { generateInvoicePdf } from '@/utils/invoiceGenerator';
 
 export default function ClientDetailPage() {
   const { projectId, clientId } = useParams<{ projectId: string; clientId: string }>();
@@ -291,7 +292,24 @@ export default function ClientDetailPage() {
                                 variant="ghost"
                                 aria-label={`Download PDF invoice ${p.invoice_number || ''}`}
                                 className="h-7 text-xs"
-                                onClick={() => toast.success('Generated PDF invoice')}
+                                onClick={() => {
+                                  generateInvoicePdf({
+                                    invoiceNumber: p.invoice_number || `INV-${new Date(p.created_at).getFullYear()}-${p.id.slice(0, 4)}`,
+                                    date: formatDate(p.paid_at || p.created_at),
+                                    businessName: project?.name ? `${project.name} Studio` : 'Developer Studio',
+                                    developerName: 'Developer',
+                                    developerEmail: '',
+                                    clientName: client?.name || 'Client',
+                                    clientEmail: client?.email || '',
+                                    projectName: project?.name || 'Project Retainer',
+                                    projectDescription: project?.description,
+                                    billingCycle: project?.billing_cycle || 'MONTHLY',
+                                    amount: Number(p.gross_amount || 0),
+                                    currency: p.currency || project?.currency || 'GHS',
+                                    status: p.status === 'SUCCESS' ? 'PAID' : 'PENDING',
+                                    paystackReference: p.paystack_ref,
+                                  });
+                                }}
                               >
                                 <Download className="w-3 h-3 mr-1" /> PDF
                               </Button>

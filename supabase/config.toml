@@ -3,3 +3,6 @@ enable_confirmations = false
 
 [auth.phone]
 enable_confirmations = false
+
+[functions.recurring-billing-cron]
+verify_jwt = false

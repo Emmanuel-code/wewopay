@@ -35,7 +35,7 @@ BEGIN
   END IF;
 
   UPDATE public.clients
-  SET status = 'CANCELLED', updated_at = NOW()
+  SET status = 'CANCELLED'
   WHERE id = p_client_id;
 
   RETURN jsonb_build_object('success', true);

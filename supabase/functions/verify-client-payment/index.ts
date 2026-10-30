@@ -156,9 +156,9 @@ serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error("verify-client-payment error:", err);
-    return new Response(JSON.stringify({ error: "Internal processing error" }), {
+    return new Response(JSON.stringify({ error: err?.message || "Internal processing error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

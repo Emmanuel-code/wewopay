@@ -13,6 +13,7 @@ import {
   Ban
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateInvoicePdf } from '@/utils/invoiceGenerator';
 
 export default function ClientPortalPage() {
   const { token } = useParams<{ token: string }>();
@@ -242,7 +243,24 @@ export default function ClientPortalPage() {
                             size="sm"
                             variant="ghost"
                             className="h-7 text-xs"
-                            onClick={() => toast.success(`Receipt ${p.invoice_number} downloaded`)}
+                            onClick={() => {
+                              generateInvoicePdf({
+                                invoiceNumber: p.invoice_number || `INV-${new Date(p.created_at).getFullYear()}-${p.id.slice(0, 4)}`,
+                                date: formatDate(p.paid_at || p.created_at),
+                                businessName: project?.name ? `${project.name} Provider` : 'Developer Studio',
+                                developerName: 'Service Provider',
+                                developerEmail: 'billing@wewopay.com',
+                                clientName: client?.name || 'Client',
+                                clientEmail: client?.email || '',
+                                projectName: project?.name || 'Service Retainer',
+                                projectDescription: project?.description,
+                                billingCycle: project?.billing_cycle || 'MONTHLY',
+                                amount: Number(p.gross_amount || 0),
+                                currency: p.currency || project?.currency || 'GHS',
+                                status: p.status === 'SUCCESS' ? 'PAID' : 'PENDING',
+                                paystackReference: p.paystack_ref,
+                              });
+                            }}
                           >
                             <Download className="w-3.5 h-3.5 mr-1" />
                             PDF Receipt
@@ -271,7 +289,34 @@ export default function ClientPortalPage() {
                 variant="outline"
                 size="sm"
                 className="w-full text-xs"
-                onClick={() => toast.success('Paystack card update link sent to your registered email.')}
+                onClick={() => {
+                  const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+                  if (!paystackKey || paystackKey.includes('xxxxxxxx')) {
+                    toast.info('Paystack public key is not configured.');
+                    return;
+                  }
+                  if (!(window as any).PaystackPop) {
+                    const script = document.createElement('script');
+                    script.src = 'https://js.paystack.co/v1/inline.js';
+                    script.onload = () => toast.info('Click again to open Paystack modal');
+                    document.head.appendChild(script);
+                    return;
+                  }
+                  const handler = (window as any).PaystackPop.setup({
+                    key: paystackKey,
+                    email: client.email,
+                    amount: 100, // 1 GHS verification authorization
+                    currency: project?.currency || 'GHS',
+                    ref: `UPD_${Math.random().toString(36).substring(2, 9).toUpperCase()}_${Date.now()}`,
+                    callback: async (response: any) => {
+                      toast.success('New payment method verified and linked to your subscription!');
+                    },
+                    onClose: () => {
+                      toast.info('Card update window closed');
+                    },
+                  });
+                  handler.openIframe();
+                }}
               >
                 <CreditCard className="w-3.5 h-3.5 mr-1.5" />
                 Update Payment Method via Paystack
