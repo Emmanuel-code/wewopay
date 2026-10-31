@@ -308,7 +308,7 @@ export default function ClientPortalPage() {
                     amount: 100, // 1 GHS verification authorization
                     currency: project?.currency || 'GHS',
                     ref: `UPD_${Math.random().toString(36).substring(2, 9).toUpperCase()}_${Date.now()}`,
-                    callback: async (response: any) => {
+                    callback: async (_response: any) => {
                       toast.success('New payment method verified and linked to your subscription!');
                     },
                     onClose: () => {

@@ -15,12 +15,17 @@ import {
   TrendingUp,
   CreditCard,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  ArrowDownToLine,
+  Loader2,
+  Banknote
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { executeCashOut } from '@/utils/payoutService';
 
 export default function DashboardHomePage() {
   const { developer, loading: devLoading, updateDeveloper, refreshDeveloper } = useDeveloper();
@@ -31,6 +36,7 @@ export default function DashboardHomePage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     if (developer?.id) {
@@ -109,6 +115,27 @@ export default function DashboardHomePage() {
       console.error('Error fetching dashboard stats:', err);
     } finally {
       setDataLoading(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!developer) return;
+    try {
+      setWithdrawing(true);
+      const result = await executeCashOut(developer);
+
+      if (result.status === 'PENDING') {
+        toast.info(result.message);
+      } else {
+        toast.success(result.message);
+      }
+
+      await refreshDeveloper();
+    } catch (err: any) {
+      console.error('Withdrawal error:', err);
+      toast.error('Cash out failed: ' + (err.message || 'Please check your bank details.'));
+    } finally {
+      setWithdrawing(false);
     }
   };
 
@@ -243,6 +270,68 @@ export default function DashboardHomePage() {
               <Button size="sm" variant="destructive" className="shrink-0">
                 View Clients
               </Button>
+            </Link>
+          </div>
+        )}
+
+        {/* ✅ Cash-Out Banner: shown whenever developer has a withdrawable balance */}
+        {Number(developer?.pending_balance || 0) > 0 && developer?.bank_verified && (
+          <div
+            id="cashout-banner"
+            className="relative overflow-hidden rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/60 via-emerald-900/40 to-emerald-950/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          >
+            {/* subtle shimmer bar */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/5 to-transparent animate-pulse pointer-events-none" />
+            <div className="flex items-center gap-3 relative z-10">
+              <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30">
+                <Banknote className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-emerald-300">
+                  {formatCurrency(developer.pending_balance || 0, 'GHS')} ready to withdraw
+                </p>
+                <p className="text-xs text-emerald-400/70">
+                  Your earnings are cleared — tap to send to {developer.bank_name || 'your bank'} (••••{developer.bank_account_number?.slice(-4)})
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 relative z-10 shrink-0">
+              <Button
+                id="dashboard-cashout-btn"
+                size="sm"
+                className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold shadow-lg shadow-emerald-900/50 transition-all"
+                disabled={withdrawing}
+                onClick={handleWithdraw}
+              >
+                {withdrawing ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-1.5" /> Processing...</>
+                ) : (
+                  <><ArrowDownToLine className="w-4 h-4 mr-1.5" /> Cash Out Now</>
+                )}
+              </Button>
+              <Link to="/dashboard/earnings">
+                <Button size="sm" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10">
+                  History
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Bank not verified nudge (only if balance > 0 but bank not verified) */}
+        {Number(developer?.pending_balance || 0) > 0 && !developer?.bank_verified && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Banknote className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-300">
+                  {formatCurrency(developer?.pending_balance || 0, 'GHS')} waiting — verify your bank to cash out
+                </p>
+                <p className="text-xs text-muted-foreground">Your earnings are accumulating but can't be released until your bank account is verified.</p>
+              </div>
+            </div>
+            <Link to="/dashboard/settings">
+              <Button size="sm" className="bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold shrink-0">Verify Bank</Button>
             </Link>
           </div>
         )}

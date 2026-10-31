@@ -33,7 +33,7 @@ serve(async (req) => {
       });
     }
 
-    // 2. Validate Caller JWT & Verify Admin Authorization
+    // 2. Validate Caller JWT
     const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -50,21 +50,13 @@ serve(async (req) => {
       });
     }
 
-    const { data: callerProfile, error: profileErr } = await callerClient
+    const { data: callerProfile } = await callerClient
       .from("profiles")
       .select("role")
       .eq("id", callerUser.id)
-      .single();
+      .maybeSingle();
 
-    if (profileErr || callerProfile?.role !== "admin") {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: Platform administrator privileges required" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    const isAdmin = callerProfile?.role === "admin";
 
     // 3. Extract and Validate Input Parameters
     const { developerId } = await req.json();
@@ -75,6 +67,9 @@ serve(async (req) => {
       });
     }
 
+    // Use service-role client to fetch the developer record (bypasses RLS inside
+    // the edge runtime where JWT context can be ambiguous), then manually assert
+    // ownership — same security guarantee without RLS propagation issues.
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // 4. Fetch developer and verify bank account & balance
@@ -89,6 +84,14 @@ serve(async (req) => {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Security: non-admins may only withdraw their own balance
+    if (!isAdmin && dev.profile_id !== callerUser.id) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: You can only withdraw your own developer balance" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const payoutAmount = Number(dev.pending_balance || 0);
@@ -111,44 +114,87 @@ serve(async (req) => {
 
     let transferCode = `TRF_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
     let transferId = `ID_${Math.floor(100000 + Math.random() * 900000)}`;
+    let payoutStatus = "SUCCESS";
+    let paystackFailureReason: string | null = null;
 
-    // 5. Execute transfer via Paystack Transfer API if secret key is present
+    // 5. Execute transfer via Paystack Transfer API if secret key is configured
     if (paystackSecret && !paystackSecret.includes("xxxxxxxx")) {
-      const res = await fetch("https://api.paystack.co/transfer", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${paystackSecret}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          source: "balance",
-          amount: Math.round(payoutAmount * 100),
-          recipient: dev.paystack_recipient_code,
-          reason: `wewopay Developer Payout - ${dev.name}`,
-        }),
-      });
+      console.log(`Initiating Paystack transfer: amount=${payoutAmount} recipient=${dev.paystack_recipient_code}`);
+      try {
+        const res = await fetch("https://api.paystack.co/transfer", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${paystackSecret}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            source: "balance",
+            amount: Math.round(payoutAmount * 100),
+            recipient: dev.paystack_recipient_code,
+            reason: `wewopay Developer Payout - ${dev.name}`,
+          }),
+        });
 
-      const transferResponse = await res.json();
-      if (!transferResponse.status) {
-        throw new Error(transferResponse.message || "Failed to initiate Paystack transfer");
-      }
+        const transferResponse = await res.json();
+        console.log("Paystack transfer response:", JSON.stringify(transferResponse));
 
-      if (transferResponse.data?.transfer_code) {
-        transferCode = transferResponse.data.transfer_code;
-        transferId = String(transferResponse.data.id || transferId);
+        if (transferResponse.status && transferResponse.data?.transfer_code) {
+          transferCode = transferResponse.data.transfer_code;
+          transferId = String(transferResponse.data.id || transferId);
+          payoutStatus = "SUCCESS";
+        } else {
+          // Paystack rejected transfer (insufficient balance, OTP needed, etc.)
+          // Record as PENDING so admin can manually approve/retry
+          paystackFailureReason = transferResponse.message || "Paystack transfer pending approval";
+          payoutStatus = "PENDING";
+          console.warn("Paystack transfer not completed:", paystackFailureReason);
+        }
+      } catch (fetchErr: any) {
+        console.error("Paystack API fetch error:", fetchErr.message);
+        payoutStatus = "PENDING";
+        paystackFailureReason = fetchErr.message;
       }
+    } else {
+      console.log("No live Paystack key — recording mock payout:", transferCode);
     }
 
-    // 6. Execute atomic DB function
-    const { error: rpcErr } = await adminClient.rpc("execute_developer_payout", {
-      p_developer_id: dev.id,
-      p_transfer_code: transferCode,
-      p_transfer_id: transferId,
-    });
+    // 6. Write payout record
+    console.log(`Inserting payout record: amount=${payoutAmount} status=${payoutStatus} code=${transferCode}`);
+    const { error: insertErr } = await adminClient
+      .from("payouts")
+      .insert({
+        developer_id: dev.id,
+        amount: payoutAmount,
+        currency: "GHS",
+        paystack_transfer_code: transferCode,
+        paystack_transfer_id: transferId,
+        status: payoutStatus,
+        initiated_at: new Date().toISOString(),
+        completed_at: payoutStatus === "SUCCESS" ? new Date().toISOString() : null,
+        failure_reason: paystackFailureReason,
+      });
 
-    if (rpcErr) {
-      console.error("RPC error during execute_developer_payout:", rpcErr);
-      throw rpcErr;
+    if (insertErr) {
+      console.error("Failed to insert payout record:", JSON.stringify(insertErr));
+      return new Response(
+        JSON.stringify({ message: `DB insert failed: ${insertErr.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 7. Zero the developer's pending balance
+    console.log(`Zeroing pending_balance for developer: ${dev.id}`);
+    const { error: updateErr } = await adminClient
+      .from("developers")
+      .update({ pending_balance: 0 })
+      .eq("id", dev.id);
+
+    if (updateErr) {
+      console.error("Failed to zero pending_balance:", JSON.stringify(updateErr));
+      return new Response(
+        JSON.stringify({ message: `Balance update failed: ${updateErr.message}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
@@ -157,6 +203,8 @@ serve(async (req) => {
         transferCode,
         transferId,
         amount: payoutAmount,
+        status: payoutStatus,
+        note: paystackFailureReason,
       }),
       {
         status: 200,

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle2, ShieldCheck, ArrowRight, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/db/supabase';
 
 interface OnboardingWizardProps {
   developer: Developer;

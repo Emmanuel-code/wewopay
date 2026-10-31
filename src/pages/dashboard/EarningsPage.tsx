@@ -20,9 +20,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { executeCashOut } from '@/utils/payoutService';
 
 export default function EarningsPage() {
-  const { developer } = useDeveloper();
+  const { developer, refreshDeveloper } = useDeveloper();
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -84,6 +85,31 @@ export default function EarningsPage() {
   const examplePlatformFee = (exampleInvoice * tierRate) / 100;
   const exampleNet = exampleInvoice - examplePaystackFee - examplePlatformFee;
 
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  const handleWithdraw = async () => {
+    if (!developer) return;
+
+    try {
+      setWithdrawing(true);
+      const result = await executeCashOut(developer);
+
+      if (result.status === 'PENDING') {
+        toast.info(result.message);
+      } else {
+        toast.success(result.message);
+      }
+
+      await refreshDeveloper();
+      await fetchPayouts(developer.id);
+    } catch (err: any) {
+      console.error('Withdrawal error:', err);
+      toast.error('Cash out failed: ' + (err.message || 'Please check your bank details.'));
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -94,18 +120,29 @@ export default function EarningsPage() {
               Direct disbursements to your verified local bank account via Paystack Transfer API.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={exportPayouts}>
-            <Download className="w-4 h-4 mr-1.5" />
-            Download History
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs"
+              size="sm"
+              disabled={withdrawing || Number(developer?.pending_balance || 0) <= 0}
+              onClick={handleWithdraw}
+            >
+              <ArrowDownRight className="w-4 h-4 mr-1.5" />
+              {withdrawing ? 'Processing Cash Out...' : `Cash Out (${formatCurrency(developer?.pending_balance || 0, 'GHS')})`}
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportPayouts}>
+              <Download className="w-4 h-4 mr-1.5" />
+              Download History
+            </Button>
+          </div>
         </div>
 
         {/* 4 Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-card">
+          <Card className="bg-card border-emerald-500/30">
             <CardHeader className="pb-2 pt-4 px-4">
               <CardDescription className="text-xs flex items-center justify-between">
-                <span>Pending Balance</span>
+                <span>Available to Cash Out</span>
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
               </CardDescription>
               <CardTitle className="text-2xl font-bold font-mono text-emerald-400">
@@ -113,7 +150,7 @@ export default function EarningsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
-              <span className="text-[11px] text-muted-foreground">Disbursed on payout schedule</span>
+              <span className="text-[11px] text-muted-foreground">Tap Cash Out to transfer to bank</span>
             </CardContent>
           </Card>
 

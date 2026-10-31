@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDeveloper } from '@/hooks/useDeveloper';
+import { formatCurrency } from '@/utils/paystack';
 import {
   LayoutDashboard,
   FolderGit2,
@@ -10,12 +11,16 @@ import {
   Settings,
   Shield,
   LogOut,
-  Menu
+  Menu,
+  ArrowDownToLine,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { executeCashOut } from '@/utils/payoutService';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -23,10 +28,32 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, signOut, isAdmin } = useAuth();
-  const { developer } = useDeveloper();
+  const { developer, refreshDeveloper } = useDeveloper();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  const handleQuickCashOut = async () => {
+    if (!developer) return;
+    try {
+      setWithdrawing(true);
+      const result = await executeCashOut(developer);
+
+      if (result.status === 'PENDING') {
+        toast.info(result.message);
+      } else {
+        toast.success(result.message);
+      }
+
+      await refreshDeveloper();
+    } catch (err: any) {
+      console.error('Withdrawal error:', err);
+      toast.error('Cash out failed: ' + (err.message || 'Check your bank details in Settings.'));
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   const navItems = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -130,18 +157,31 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           )}
         </nav>
 
-        {/* Bottom stats summary */}
+        {/* Bottom cash-out widget */}
         <div className="p-4 border-t border-border/40 m-3 rounded-xl bg-card border">
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span>Pending Payout</span>
+            <span>Available Balance</span>
             <span className="font-mono text-emerald-400 font-bold">
-              GH₵ {Number(developer?.pending_balance || 0).toFixed(2)}
+              {formatCurrency(developer?.pending_balance || 0, 'GHS')}
             </span>
           </div>
-          <div className="text-[11px] text-muted-foreground flex items-center justify-between">
+          <div className="text-[11px] text-muted-foreground flex items-center justify-between mb-3">
             <span>Comm. Rate</span>
             <span className="font-semibold text-foreground">{developer?.commission_rate || 3.0}%</span>
           </div>
+          <Button
+            id="sidebar-cashout-btn"
+            size="sm"
+            className="w-full h-8 text-xs font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 transition-all"
+            disabled={withdrawing || Number(developer?.pending_balance || 0) <= 0}
+            onClick={handleQuickCashOut}
+          >
+            {withdrawing ? (
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing...</>
+            ) : (
+              <><ArrowDownToLine className="w-3.5 h-3.5" /> Cash Out Now</>
+            )}
+          </Button>
         </div>
 
         {/* User logout */}
